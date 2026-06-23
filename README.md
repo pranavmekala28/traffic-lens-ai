@@ -19,6 +19,7 @@ For any input video, the pipeline generates four artifacts in a `traffic_output/
 | `*_timeline.csv` | Exact vehicle counts over time, with timestamps |
 | `*_charts.png` | Vehicles over time, type breakdown, and congestion timeline |
 | `*_report.html` | A self-contained report: summary stats, charts, incidents, full timeline |
+<img width="1097" height="1207" alt="image" src="https://github.com/user-attachments/assets/cb27d1b3-a91e-419e-9df9-5c6203695744" />
 
 ## How it works
 
