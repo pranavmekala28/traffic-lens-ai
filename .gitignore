@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Model weights (auto-downloaded on first run)
+*.pt
+
+# Generated media
+uploads/*
+static/results/*
+!uploads/.gitkeep
+!static/results/.gitkeep
+
+# Detection history (local data)
+data/history.json
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+# venvs, secrets, generated outputs
+.venv/
+env2/
+traffic_output/
+.env
+.env.*
