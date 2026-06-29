@@ -21,6 +21,7 @@ import os
 import re
 import uuid
 from datetime import datetime
+from flask_cors import CORS
 
 from flask import (Flask, abort, jsonify, render_template, request,
                    send_from_directory, url_for)
@@ -30,6 +31,7 @@ from config import Config
 from detector import VehicleDetector
 
 app = Flask(__name__)
+CORS(app)
 app.config["MAX_CONTENT_LENGTH"] = Config.MAX_CONTENT_LENGTH
 Config.ensure_dirs()
 
