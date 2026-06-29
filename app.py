@@ -79,7 +79,7 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/upload")
+@app.route("/upload", methods=["GET", "POST", "OPTIONS"])
 def upload_page():
     return render_template("upload.html")
 
