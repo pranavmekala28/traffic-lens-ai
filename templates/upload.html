@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Upload · Traffic Lens AI{% endblock %}
+{% block head %}
+<style>
+  .drop{
+    border:1.5px dashed var(--line); border-radius:14px; background:var(--asphalt-2);
+    padding:48px 24px; text-align:center; transition:border-color .15s,background .15s; cursor:pointer;
+  }
+  .drop:hover,.drop.over{ border-color:var(--cyan); background:#1a2127; }
+  .drop .ic{ font-size:34px; }
+  .drop h3{ font:600 18px/1.2 system-ui,sans-serif; margin:12px 0 6px; }
+  .drop p{ color:var(--muted); font-size:13px; margin:0; }
+  .drop .pick{ color:var(--cyan); font-weight:600; }
+  #file{ display:none; }
+  .chosen{ margin-top:16px; font-size:14px; color:var(--ink); display:none; }
+  .chosen b{ color:var(--cyan); }
+  .actions{ display:flex; gap:12px; flex-wrap:wrap; margin-top:20px; }
+  .actions .btn[disabled]{ opacity:.45; cursor:not-allowed; }
+  .note{ color:var(--muted); font-size:12.5px; margin-top:14px; line-height:1.5; }
+
+  .result{ margin-top:34px; display:none; }
+  .result video,.result img{ width:100%; border:1px solid var(--line); border-radius:12px; background:#000; }
+  .counts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; margin-top:18px; }
+  .counts .c{ background:var(--asphalt-2); border:1px solid var(--line); border-radius:10px; padding:14px; }
+  .counts .c .n{ font:700 24px/1 "Space Grotesk",system-ui,sans-serif; color:var(--cyan); }
+  .counts .c .l{ color:var(--muted); font-size:12px; margin-top:5px; text-transform:capitalize; }
+
+  .status{
+    display:none; margin-top:22px; padding:16px 18px; border-radius:11px;
+    background:var(--asphalt-2); border:1px solid var(--line); align-items:center; gap:14px;
+  }
+  .status.show{ display:flex; }
+  .spinner{ width:20px; height:20px; border:2.5px solid var(--line); border-top-color:var(--cyan); border-radius:50%; animation:spin .8s linear infinite; flex:none; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .status .txt{ font-size:14px; }
+  .status.err{ border-color:var(--amber-dim); }
+  .status.err .txt{ color:var(--amber); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="pagehead">
+    <div class="eyebrow">Step 1 · feed the camera</div>
+    <h1>Upload a video</h1>
+    <p>Drop in a road or dashcam clip. Detect and count vehicles now — collision analysis runs as a background job (wiring up next).</p>
+  </div>
+
+  <label class="drop" id="drop">
+    <div class="ic">⬆</div>
+    <h3>Drop a video here, or <span class="pick">browse</span></h3>
+    <p>MP4, MOV, or AVI · images work too (JPG, PNG)</p>
+    <input type="file" id="file" accept="video/*,image/*">
+  </label>
+  <div class="chosen" id="chosen"></div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="detect" disabled>Detect vehicles</button>
+    <button class="btn btn-ghost" id="collide" disabled title="Background job — coming next">Find collisions</button>
+  </div>
+  <div class="note">Detection draws boxes and counts vehicles right away. “Find collisions” will kick off Jockey indexing in the background with a progress bar.</div>
+
+  <div class="status" id="status">
+    <div class="spinner" id="spin"></div>
+    <div class="txt" id="status-txt">Working…</div>
+  </div>
+
+  <div class="result" id="result">
+    <div class="eyebrow" style="margin-bottom:12px">Result</div>
+    <div id="result-media"></div>
+    <div class="counts" id="counts"></div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+  const fileInput = document.getElementById('file');
+  const drop = document.getElementById('drop');
+  const chosen = document.getElementById('chosen');
+  const detectBtn = document.getElementById('detect');
+  const collideBtn = document.getElementById('collide');
+  const statusBox = document.getElementById('status');
+  const statusTxt = document.getElementById('status-txt');
+  const spin = document.getElementById('spin');
+  const result = document.getElementById('result');
+  const resultMedia = document.getElementById('result-media');
+  const countsBox = document.getElementById('counts');
+  let chosenFile = null;
+
+  function setFile(f){
+    chosenFile = f;
+    chosen.style.display = 'block';
+    chosen.innerHTML = 'Selected: <b>' + f.name + '</b>';
+    detectBtn.disabled = false;
+  }
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
+  ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => { if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+
+  function showStatus(msg, isErr){
+    statusBox.classList.add('show');
+    statusBox.classList.toggle('err', !!isErr);
+    spin.style.display = isErr ? 'none' : 'block';
+    statusTxt.textContent = msg;
+  }
+
+  detectBtn.addEventListener('click', async () => {
+    if (!chosenFile) return;
+    detectBtn.disabled = true;
+    result.style.display = 'none';
+    showStatus('Running detection — this can take a moment for video…', false);
+    const fd = new FormData();
+    fd.append('file', chosenFile);
+    try {
+      const res = await fetch("{{ url_for('api_detect') }}", { method:'POST', body:fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Detection failed');
+      statusBox.classList.remove('show');
+      renderResult(data);
+    } catch (err) {
+      showStatus(err.message, true);
+    } finally {
+      detectBtn.disabled = false;
+    }
+  });
+
+  function renderResult(data){
+    const url = data.result_url;
+    const isVideo = url && url.toLowerCase().endsWith('.mp4');
+    resultMedia.innerHTML = isVideo
+      ? '<video src="'+url+'" controls preload="metadata"></video>'
+      : '<img src="'+url+'" alt="annotated result">';
+    const counts = data.counts || data.by_class || {};
+    let html = '<div class="c"><div class="n">'+(data.total_vehicles ?? 0)+'</div><div class="l">total vehicles</div></div>';
+    Object.keys(counts).forEach(k => {
+      html += '<div class="c"><div class="n">'+counts[k]+'</div><div class="l">'+k+'</div></div>';
+    });
+    countsBox.innerHTML = html;
+    result.style.display = 'block';
+    result.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+</script>
+{% endblock %}
+{% endblock %}

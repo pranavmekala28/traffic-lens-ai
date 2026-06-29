@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Collisions · Traffic Lens AI{% endblock %}
+{% block head %}
+<style>
+  .cl-grid{ display:grid; grid-template-columns:1.15fr .85fr; gap:26px; align-items:start; }
+  @media (max-width:860px){ .cl-grid{ grid-template-columns:1fr; } }
+
+  .cl-stage{ position:sticky; top:80px; }
+  .cl-video{ width:100%; border-radius:14px; background:#000; display:block; border:1px solid var(--line); aspect-ratio:16/9; object-fit:contain; }
+  .cl-novideo{ width:100%; aspect-ratio:16/9; border:1px dashed var(--line); border-radius:14px; display:grid; place-content:center; text-align:center; color:var(--muted); background:var(--asphalt-2); font-size:13px; padding:20px; }
+  .cl-nowplaying{ margin-top:10px; font-size:13px; color:var(--muted); min-height:19px; }
+  .cl-nowplaying b{ color:var(--cyan); }
+
+  .cl-count{ font:600 12px/1 ui-monospace,monospace; color:var(--muted); margin-bottom:14px; letter-spacing:.05em; }
+  .cl-list{ list-style:none; margin:0; padding:0; position:relative; }
+  .cl-list::before{ content:""; position:absolute; left:11px; top:6px; bottom:6px; width:2px; background:var(--line); }
+  .cl-item{ position:relative; padding:0 0 18px 38px; }
+  .cl-item::before{ content:""; position:absolute; left:5px; top:6px; width:14px; height:14px; border-radius:50%; background:var(--asphalt); border:2px solid var(--cyan); }
+  .cl-item.heavy::before{ border-color:var(--amber); }
+  .cl-card{ background:var(--asphalt-2); border:1px solid var(--line); border-left:3px solid var(--cyan); border-radius:10px; padding:13px 15px; transition:border-color .15s,transform .12s; }
+  .cl-item.heavy .cl-card{ border-left-color:var(--amber); }
+  .cl-card:hover{ transform:translateX(2px); border-color:var(--cyan-dim); }
+  .cl-item.heavy .cl-card:hover{ border-color:var(--amber-dim); }
+  .cl-chip{ display:inline-flex; align-items:center; gap:6px; cursor:pointer; font:700 13px/1 ui-monospace,monospace; letter-spacing:.04em; color:var(--asphalt); background:var(--cyan); border:none; padding:5px 10px; border-radius:6px; margin-bottom:9px; }
+  .cl-item.heavy .cl-chip{ background:var(--amber); }
+  .cl-chip[disabled]{ background:var(--line); color:var(--muted); cursor:default; }
+  .cl-chip:not([disabled]):hover{ filter:brightness(1.12); }
+  .cl-chip svg{ width:11px; height:11px; }
+  .cl-desc{ font:400 14px/1.55 system-ui,sans-serif; color:var(--ink); }
+
+  .cl-empty{ border:1px dashed var(--line); border-radius:14px; padding:40px 28px; text-align:center; color:var(--muted); background:var(--asphalt-2); }
+  .cl-empty code{ color:var(--cyan); font-size:13px; }
+  details.cl-raw{ margin-top:30px; }
+  details.cl-raw summary{ cursor:pointer; color:var(--muted); font-size:13px; }
+  details.cl-raw pre{ white-space:pre-wrap; background:var(--asphalt-2); border:1px solid var(--line); border-radius:10px; padding:16px; color:var(--ink); font-size:12.5px; line-height:1.5; margin-top:10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="pagehead">
+    <div class="eyebrow">Jockey · incident analysis</div>
+    <h1>Collision timeline</h1>
+    <p>Every collision the model flagged in the clip, in order. Tap a timestamp to jump the video to that moment.</p>
+  </div>
+
+  {% if not has_report %}
+    <div class="cl-empty">
+      <p>No collision report yet.</p>
+      <p>Run <code>jockey_test.py</code> on a clip — it writes <code>traffic_output/collision_report.txt</code>, and this page reads from there.</p>
+    </div>
+  {% elif incidents|length == 0 %}
+    <div class="cl-empty">
+      <p>The report ran but no collisions were parsed out of it.</p>
+      <details class="cl-raw" open><summary>Raw report</summary><pre>{{ raw_report }}</pre></details>
+    </div>
+  {% else %}
+    <div class="cl-grid">
+      <div>
+        <div class="cl-count">{{ incidents|length }} incident{{ '' if incidents|length == 1 else 's' }} detected</div>
+        <ul class="cl-list">
+          {% for inc in incidents %}
+          <li class="cl-item{% if inc.heavy %} heavy{% endif %}">
+            <div class="cl-card">
+              {% if inc.start_seconds is not none %}
+                <button class="cl-chip" data-seek="{{ inc.start_seconds }}" title="Jump to {{ inc.time_label }}">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  {{ inc.time_label }}
+                </button>
+              {% else %}
+                <button class="cl-chip" disabled>no time</button>
+              {% endif %}
+              <div class="cl-desc">{{ inc.description }}</div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        <details class="cl-raw"><summary>View raw report text</summary><pre>{{ raw_report }}</pre></details>
+      </div>
+
+      <div class="cl-stage">
+        {% if video_name %}
+          <video id="cl-video" class="cl-video" controls preload="metadata" src="{{ url_for('serve_output', filename=video_name) }}"></video>
+          <div class="cl-nowplaying" id="cl-now">Tap a timestamp to seek</div>
+        {% else %}
+          <div class="cl-novideo">No annotated video found in <code>traffic_output/</code>.<br>Timestamps are still listed in order.</div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+{% block scripts %}
+<script>
+  (function(){
+    var video = document.getElementById('cl-video');
+    var now = document.getElementById('cl-now');
+    document.querySelectorAll('.cl-chip[data-seek]').forEach(function(chip){
+      chip.addEventListener('click', function(){
+        if (!video) return;
+        var t = parseFloat(chip.getAttribute('data-seek'));
+        if (isNaN(t)) return;
+        video.currentTime = t;
+        video.play().catch(function(){});
+        if (now) now.innerHTML = 'Playing from <b>' + chip.textContent.trim() + '</b>';
+        video.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      });
+    });
+  })();
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Traffic Lens AI — see what the camera sees{% endblock %}
+{% block head %}
+<style>
+  .hero{ padding:64px 0 40px; }
+  .hero .eyebrow{ margin-bottom:14px; }
+  .hero h1{
+    font:700 clamp(36px,6vw,68px)/1.0 "Space Grotesk",system-ui,sans-serif;
+    letter-spacing:-.03em; margin:0; max-width:16ch;
+  }
+  .hero h1 .c{ color:var(--cyan); }
+  .hero h1 .a{ color:var(--amber); }
+  .hero p{ color:var(--muted); font-size:17px; line-height:1.5; margin:20px 0 28px; max-width:54ch; }
+  .hero .cta{ display:flex; gap:12px; flex-wrap:wrap; }
+
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; padding:8px 0 48px; }
+  @media (max-width:680px){ .stats{ grid-template-columns:1fr; } }
+  .stat .n{ font:700 32px/1 "Space Grotesk",system-ui,sans-serif; }
+  .stat .n.c{ color:var(--cyan); } .stat .n.a{ color:var(--amber); }
+  .stat .l{ color:var(--muted); font-size:13px; margin-top:6px; }
+
+  .feat{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; padding:0 0 56px; }
+  @media (max-width:760px){ .feat{ grid-template-columns:1fr; } }
+  .feat .card{ display:flex; flex-direction:column; }
+  .feat .tag{
+    font:600 11px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase;
+    padding:4px 8px; border-radius:6px; align-self:flex-start; margin-bottom:12px;
+  }
+  .feat .tag.c{ color:var(--asphalt); background:var(--cyan); }
+  .feat .tag.a{ color:var(--asphalt); background:var(--amber); }
+  .feat .tag.n{ color:var(--muted); background:var(--asphalt-3); }
+  .feat h3{ font:600 18px/1.2 system-ui,sans-serif; margin:0 0 8px; }
+  .feat p{ color:var(--muted); font-size:14px; line-height:1.55; margin:0 0 16px; }
+  .feat a{ margin-top:auto; font-size:14px; font-weight:600; text-decoration:none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="container hero">
+  <div class="eyebrow">Fixed-camera traffic intelligence</div>
+  <h1>See what the <span class="c">camera</span> sees — and what it <span class="a">misses</span>.</h1>
+  <p>Upload road or dashcam footage. Traffic Lens detects and counts every vehicle, then reads the scene for collisions and pinpoints the exact moment each crash happens.</p>
+  <div class="cta">
+    <a href="{{ url_for('upload_page') }}" class="btn btn-primary">Upload a video →</a>
+    <a href="{{ url_for('collisions') }}" class="btn btn-ghost">See a collision timeline</a>
+  </div>
+</section>
+
+<section class="container stats">
+  <div class="card stat"><div class="n c" id="s-runs">—</div><div class="l">Videos analyzed</div></div>
+  <div class="card stat"><div class="n" id="s-vehicles">—</div><div class="l">Vehicles detected</div></div>
+  <div class="card stat"><div class="n a" id="s-classes">5</div><div class="l">Vehicle classes tracked</div></div>
+</section>
+
+<section class="container feat">
+  <div class="card">
+    <span class="tag c">Detection</span>
+    <h3>Count every vehicle</h3>
+    <p>YOLOv8 draws a box around each car, truck, bus, motorcycle, and bicycle, frame by frame, and tallies the totals.</p>
+    <a href="{{ url_for('upload_page') }}">Run detection →</a>
+  </div>
+  <div class="card">
+    <span class="tag a">Collisions</span>
+    <h3>Catch the crash</h3>
+    <p>Jockey reads the footage for impacts, near-misses, and stopped vehicles, and timestamps each one to the second.</p>
+    <a href="{{ url_for('collisions') }}">View timeline →</a>
+  </div>
+  <div class="card">
+    <span class="tag n">Dashboard</span>
+    <h3>Read the trends</h3>
+    <p>Totals by class, runs over time, and the most recent analyses, all in one place.</p>
+    <a href="{{ url_for('dashboard_page') }}">Open dashboard →</a>
+  </div>
+</section>
+
+{% block scripts %}
+<script>
+  fetch("{{ url_for('api_stats') }}")
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('s-runs').textContent = d.runs ?? 0;
+      document.getElementById('s-vehicles').textContent = (d.total_vehicles ?? 0).toLocaleString();
+    })
+    .catch(() => {});
+</script>
+{% endblock %}
+{% endblock %}

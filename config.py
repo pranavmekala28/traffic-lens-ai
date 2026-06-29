@@ -21,7 +21,7 @@ class Config:
     CONFIDENCE = float(os.environ.get("TLA_CONF", "0.35"))
 
     # Process every Nth frame for videos (speed vs. accuracy)
-    VIDEO_FRAME_STRIDE = int(os.environ.get("TLA_STRIDE", "3"))
+    VIDEO_FRAME_STRIDE = int(os.environ.get("TLA_STRIDE", "30"))
 
     @staticmethod
     def ensure_dirs():

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}About · Traffic Lens AI{% endblock %}
+{% block head %}
+<style>
+  .about-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px){ .about-grid{ grid-template-columns:1fr; } }
+  .about-grid .card h3{ font:600 16px/1.2 system-ui,sans-serif; margin:0 0 8px; }
+  .about-grid .card .tag{ font:600 11px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--cyan); }
+  .about-grid .card.a .tag{ color:var(--amber); }
+  .about-grid .card p{ color:var(--muted); font-size:14px; line-height:1.6; margin:10px 0 0; }
+  .flow{ counter-reset:step; list-style:none; padding:0; margin:8px 0 0; }
+  .flow li{ counter-increment:step; position:relative; padding:14px 0 14px 46px; border-bottom:1px solid var(--line); }
+  .flow li:last-child{ border-bottom:none; }
+  .flow li::before{ content:counter(step); position:absolute; left:0; top:12px; width:28px; height:28px; border-radius:8px; background:var(--asphalt-3); color:var(--cyan); font:700 13px/28px ui-monospace,monospace; text-align:center; }
+  .flow b{ color:var(--ink); }
+  .flow span{ color:var(--muted); font-size:13.5px; }
+  .stack{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .stack span{ font:600 12px/1 ui-monospace,monospace; padding:6px 10px; border-radius:7px; background:var(--asphalt-3); color:var(--ink); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="pagehead">
+    <div class="eyebrow">What this is</div>
+    <h1>About Traffic Lens</h1>
+    <p>A local-first tool that turns traffic footage into two kinds of answers: how many vehicles, and where the crashes are.</p>
+  </div>
+
+  <div class="about-grid">
+    <div class="card">
+      <span class="tag">Detection engine</span>
+      <h3>YOLOv8 + OpenCV</h3>
+      <p>Counts cars, trucks, buses, motorcycles, and bicycles frame by frame, and writes an annotated video with boxes drawn on every vehicle.</p>
+    </div>
+    <div class="card a">
+      <span class="tag">Collision engine</span>
+      <h3>Jockey</h3>
+      <p>Reads the footage semantically, finds the moments vehicles impact each other, and returns each one with a start/end timestamp and a plain-language description.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <span class="eyebrow">How a video moves through it</span>
+    <ol class="flow">
+      <li><b>Upload</b> — <span>drop a road or dashcam clip into the browser.</span></li>
+      <li><b>Detect</b> — <span>YOLOv8 boxes and counts every vehicle, and saves an annotated copy.</span></li>
+      <li><b>Analyze</b> — <span>Jockey indexes the clip and scans it for collisions.</span></li>
+      <li><b>Read</b> — <span>results land in the dashboard, the collision timeline, and a report.</span></li>
+    </ol>
+    <div class="stack">
+      <span>Flask</span><span>YOLOv8</span><span>OpenCV</span><span>Jockey</span><span>Chart.js</span><span>Python 3.12</span>
+    </div>
+  </div>
+
+  <p style="color:var(--muted);font-size:13px;margin-top:22px">Everything runs locally — footage stays on your machine.</p>
+</div>
+{% endblock %}

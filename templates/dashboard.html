@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Traffic Lens AI{% endblock %}
+{% block head %}
+<style>
+  .kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+  @media (max-width:760px){ .kpis{ grid-template-columns:repeat(2,1fr); } }
+  .kpi .n{ font:700 30px/1 "Space Grotesk",system-ui,sans-serif; }
+  .kpi .n.c{ color:var(--cyan); } .kpi .n.a{ color:var(--amber); }
+  .kpi .l{ color:var(--muted); font-size:13px; margin-top:6px; }
+
+  .grid2{ display:grid; grid-template-columns:1.2fr .8fr; gap:16px; align-items:start; }
+  @media (max-width:860px){ .grid2{ grid-template-columns:1fr; } }
+  .card h3{ font:600 15px/1 system-ui,sans-serif; margin:0 0 16px; }
+  .card .sub{ color:var(--muted); font-size:12px; font-weight:400; }
+
+  .recent{ list-style:none; margin:0; padding:0; }
+  .recent li{ display:flex; justify-content:space-between; gap:10px; padding:11px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .recent li:last-child{ border-bottom:none; }
+  .recent .name{ color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .recent .v{ color:var(--cyan); font-weight:600; font-family:ui-monospace,monospace; flex:none; }
+
+  .empty{ color:var(--muted); font-size:14px; text-align:center; padding:30px 10px; }
+  .empty a{ font-weight:600; text-decoration:none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="pagehead">
+    <div class="eyebrow">Aggregate view</div>
+    <h1>Dashboard</h1>
+    <p>Everything Traffic Lens has analyzed so far, across all your runs.</p>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi"><div class="n c" id="k-runs">—</div><div class="l">Videos analyzed</div></div>
+    <div class="card kpi"><div class="n" id="k-vehicles">—</div><div class="l">Vehicles detected</div></div>
+    <div class="card kpi"><div class="n a" id="k-top">—</div><div class="l">Most common class</div></div>
+    <div class="card kpi"><div class="n" id="k-avg">—</div><div class="l">Avg per video</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Vehicles by class <span class="sub">— all runs combined</span></h3>
+      <canvas id="chart" height="150"></canvas>
+      <div class="empty" id="chart-empty" style="display:none">No data yet. <a href="{{ url_for('upload_page') }}">Analyze a video →</a></div>
+    </div>
+    <div class="card">
+      <h3>Recent analyses</h3>
+      <ul class="recent" id="recent"></ul>
+      <div class="empty" id="recent-empty" style="display:none">Nothing analyzed yet.</div>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  const COLORS = { car:'#36d6e0', truck:'#f2a93b', bus:'#f2a93b', motorcycle:'#36d6e0', bicycle:'#7ee3ea' };
+
+  fetch("{{ url_for('api_stats') }}").then(r => r.json()).then(d => {
+    const runs = d.runs || 0;
+    const total = d.total_vehicles || 0;
+    const byClass = d.by_class || {};
+
+    document.getElementById('k-runs').textContent = runs;
+    document.getElementById('k-vehicles').textContent = total.toLocaleString();
+    document.getElementById('k-avg').textContent = runs ? Math.round(total/runs).toLocaleString() : '0';
+
+    const entries = Object.entries(byClass).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]);
+    document.getElementById('k-top').textContent = entries.length ? entries[0][0] : '—';
+
+    if (entries.length){
+      new Chart(document.getElementById('chart'), {
+        type:'bar',
+        data:{
+          labels: entries.map(e => e[0]),
+          datasets:[{ data: entries.map(e => e[1]),
+            backgroundColor: entries.map(e => COLORS[e[0]] || '#9aa3b0'), borderRadius:6 }]
+        },
+        options:{
+          plugins:{ legend:{ display:false } },
+          scales:{
+            x:{ grid:{ display:false }, ticks:{ color:'#9aa3b0' } },
+            y:{ grid:{ color:'#2c313b' }, ticks:{ color:'#9aa3b0' }, beginAtZero:true }
+          }
+        }
+      });
+    } else {
+      document.getElementById('chart').style.display = 'none';
+      document.getElementById('chart-empty').style.display = 'block';
+    }
+
+    const recent = d.recent || [];
+    const ul = document.getElementById('recent');
+    if (recent.length){
+      ul.innerHTML = recent.map(r =>
+        '<li><span class="name">'+(r.filename||'clip')+'</span><span class="v">'+(r.total_vehicles ?? 0)+'</span></li>'
+      ).join('');
+    } else {
+      document.getElementById('recent-empty').style.display = 'block';
+    }
+  }).catch(() => {
+    document.getElementById('chart-empty').style.display = 'block';
+    document.getElementById('recent-empty').style.display = 'block';
+  });
+</script>
+{% endblock %}
+{% endblock %}

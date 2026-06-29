@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Traffic Lens AI{% endblock %}</title>
+  <style>
+    :root{
+      --asphalt:#15171c; --asphalt-2:#1d2128; --asphalt-3:#22272f; --line:#2c313b;
+      --ink:#e7ebf0; --muted:#9aa3b0;
+      --cyan:#36d6e0; --cyan-dim:#1f7f86; --amber:#f2a93b; --amber-dim:#9c6a18;
+      --r:12px;
+    }
+    *{ box-sizing:border-box; }
+    html{ scroll-behavior:smooth; }
+    body{
+      margin:0; background:var(--asphalt); color:var(--ink); min-height:100vh;
+      display:flex; flex-direction:column;
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+      -webkit-font-smoothing:antialiased;
+    }
+    a{ color:var(--cyan); }
+    code{ font-family:ui-monospace,"SF Mono",Menlo,monospace; }
+    .eyebrow{
+      font:600 11px/1 ui-monospace,"SF Mono",Menlo,monospace; letter-spacing:.22em;
+      text-transform:uppercase; color:var(--cyan);
+    }
+    .container{ width:100%; max-width:1120px; margin:0 auto; padding:0 24px; }
+
+    /* ---- nav ---- */
+    .nav{
+      display:flex; align-items:center; gap:6px; padding:14px 24px;
+      border-bottom:1px solid var(--line); background:rgba(21,23,28,.92);
+      backdrop-filter:blur(8px); position:sticky; top:0; z-index:50;
+    }
+    .nav .brand{ font-weight:700; letter-spacing:-.01em; margin-right:auto; font-size:16px; }
+    .nav .brand b{ color:var(--cyan); }
+    .nav .brand .dot{ color:var(--amber); }
+    .nav a.link{
+      color:var(--muted); text-decoration:none; font-size:14px;
+      padding:7px 13px; border-radius:8px; transition:background .15s,color .15s;
+    }
+    .nav a.link:hover{ color:var(--ink); background:var(--asphalt-3); }
+    .nav a.link.active{ color:var(--asphalt); background:var(--cyan); font-weight:600; }
+    @media (max-width:680px){
+      .nav{ flex-wrap:wrap; gap:4px; }
+      .nav .brand{ width:100%; margin-bottom:6px; }
+      .nav a.link{ padding:6px 10px; font-size:13px; }
+    }
+
+    main{ flex:1; }
+
+    /* ---- shared building blocks ---- */
+    .btn{
+      display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+      font:600 14px/1 system-ui,sans-serif; text-decoration:none;
+      padding:11px 18px; border-radius:9px; border:1px solid transparent; transition:filter .15s,transform .1s;
+    }
+    .btn:active{ transform:translateY(1px); }
+    .btn-primary{ background:var(--cyan); color:var(--asphalt); }
+    .btn-primary:hover{ filter:brightness(1.1); }
+    .btn-ghost{ background:transparent; color:var(--ink); border-color:var(--line); }
+    .btn-ghost:hover{ background:var(--asphalt-3); }
+    .card{
+      background:var(--asphalt-2); border:1px solid var(--line); border-radius:var(--r); padding:20px;
+    }
+    .pagehead{ padding:40px 0 26px; }
+    .pagehead h1{
+      font:700 clamp(28px,4vw,44px)/1.04 "Space Grotesk",system-ui,sans-serif;
+      margin:8px 0 0; letter-spacing:-.02em;
+    }
+    .pagehead p{ color:var(--muted); font-size:15px; margin:10px 0 0; max-width:62ch; }
+
+    footer{
+      border-top:1px solid var(--line); color:var(--muted); font-size:13px;
+      padding:22px 24px; margin-top:48px;
+    }
+    footer .container{ display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    footer b{ color:var(--ink); font-weight:600; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <nav class="nav">
+    <a href="{{ url_for('index') }}" class="brand" style="text-decoration:none;color:var(--ink)">Traffic <b>Lens</b> <span class="dot">AI</span></a>
+    <a href="{{ url_for('index') }}"         class="link {% if request.endpoint=='index' %}active{% endif %}">Home</a>
+    <a href="{{ url_for('upload_page') }}"    class="link {% if request.endpoint=='upload_page' %}active{% endif %}">Upload</a>
+    <a href="{{ url_for('dashboard_page') }}" class="link {% if request.endpoint=='dashboard_page' %}active{% endif %}">Dashboard</a>
+    <a href="{{ url_for('collisions') }}"     class="link {% if request.endpoint=='collisions' %}active{% endif %}">Collisions</a>
+    <a href="{{ url_for('about_page') }}"     class="link {% if request.endpoint=='about_page' %}active{% endif %}">About</a>
+  </nav>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <div class="container">
+      <span>Traffic <b>Lens</b> AI — vehicle detection &amp; collision analysis</span>
+      <span>Runs locally · YOLOv8 + Jockey</span>
+    </div>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
